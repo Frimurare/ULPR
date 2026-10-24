@@ -40,6 +40,8 @@ rättigheter och visas aldrig i klartext.
   svenska skyltar (snö, smuts, nya skyltformat).
 - Hälsorapportering (heartbeat, kamerabortfall, GPU-fel) till Prudencias övervakning.
 - Händelser även som scenario-text för tydliga larm i OpenEye.
+- Hårdvaruavkodning av video i GPU:n (NVDEC) och OCR på GPU via onnxruntime-gpu, samma
+  modell och träffsäkerhet men lägre CPU-last per kamera, inför fler kameror per server.
 
 ### 0.4 Liten hårdvara
 - Port till Raspberry Pi 5 med AI HAT+ 2 (Hailo-10H) för 2–4 kameror per enhet:
