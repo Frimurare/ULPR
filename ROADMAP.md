@@ -45,6 +45,9 @@ rättigheter och visas aldrig i klartext.
 - Port till Raspberry Pi 5 med AI HAT+ 2 (Hailo-10H) för 2–4 kameror per enhet:
   modeller kompilerade till HEF, H.265-huvudström, samma webbgränssnitt.
 - Alternativ GPU-klass för kontorsdatorer (RTX A2000 / RTX 2000 Ada).
+- Tvåstegslarm: Pi-enheten ger första triggern (person, fordon, rök) som analyshändelse till
+  OpenEye, och OpenEyes AI Visual Check gör den andra kontrollen med ett fritextvillkor innan
+  det blir ett skarpt larm. Billigt första filter, få falsklarm, Visual Check bara vid behov.
 
 ### 1.0 Produkt
 - Installationspaket (Ubuntu) och uppdateringsmekanism.
