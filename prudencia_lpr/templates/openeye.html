@@ -1,0 +1,55 @@
+{% extends 'base.html' %}
+{% block title %}OpenEye{% endblock %}
+{% block page %}openeye{% endblock %}
+{% block content %}
+<h1>OpenEye</h1>
+<div class="grid2">
+<form method="post" class="card" autocomplete="off">
+  <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+  <h2>Event Receiver API (Analytics)</h2>
+  <label class="check"><input type="checkbox" name="oe_enabled" value="1" {{ 'checked' if s.oe_enabled }}> Skicka läsningar till OpenEye</label>
+  <label>Event API-adress<input type="text" name="oe_url" value="{{ s.oe_url }}" class="mono" placeholder="https://KONTO-ex.api.gp4f.com"></label>
+  <label>API Access Key (AKI)<input type="text" name="oe_aki" value="" class="mono" maxlength="64" autocomplete="off" placeholder="{{ 'Sparad (' ~ aki_hint ~ ') – lämna tomt för att behålla' if s.oe_aki else '12 tecken, t.ex. ABCD1234EFGH' }}"></label>
+  <label>Secret (AKS)<input type="password" name="oe_aks" value="" autocomplete="new-password" class="mono" placeholder="{{ 'Sparad – lämna tomt för att behålla' if has_aks else 'Klistra in hemligheten' }}"></label>
+  {% if s.oe_aki or has_aks %}<label class="check small"><input type="checkbox" name="clear_keys" value="1"> Ta bort sparade nycklar</label>{% endif %}
+  <p class="help">Skapas i OWS under Management, Manage Integrations, integrationen <em>Event Receiver API (Analytics)</em>, fliken API Access Keys. Adressen visas på samma sida som <em>Event API Access URL</em> och är unik per konto.</p>
+  <h2>Begränsning av utskick</h2>
+  <div class="row">
+    <label class="grow">Per minut<input type="number" name="rl_min" value="{{ s.rl_min }}" min="1" max="50"></label>
+    <label class="grow">Per timme<input type="number" name="rl_hour" value="{{ s.rl_hour }}" min="1" max="500"></label>
+    <label class="grow">Per dygn<input type="number" name="rl_day" value="{{ s.rl_day }}" min="1" max="5000"></label>
+  </div>
+  <p class="help">OpenEye tar emot högst 50 per minut, 500 per timme och 5 000 per dygn för Analytics-händelser.</p>
+  <div class="actions"><button class="btn primary" type="submit">Spara</button></div>
+</form>
+<div>
+  <section class="card">
+    <h2>Skicka testhändelse</h2>
+    {% if cams %}
+    <form id="oe-test" class="stack">
+      <div class="row">
+        <label class="grow">Kamera<select name="camera_id">{% for c in cams %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}</select></label>
+        <label class="w140">Skylt<input type="text" name="plate" value="TST 001" maxlength="10" class="mono"></label>
+      </div>
+      <div class="actions"><button class="btn" type="submit">Skicka testhändelse</button></div>
+    </form>
+    <div id="oe-test-result" class="result" hidden></div>
+    {% else %}
+    <p class="muted">Ingen kamera har OpenEye kamera-id ännu. Ange id under Kameror först.</p>
+    {% endif %}
+  </section>
+  <section class="card">
+    <h2>Misslyckade utskick</h2>
+    <p><strong>{{ failed }}</strong> läsningar har inte kunnat levereras till OpenEye (fel svar eller hastighetsgräns).</p>
+    {% if no_id %}<p class="flash warn">{{ no_id }} aktiverade kameror saknar OpenEye kamera-id; deras läsningar sparas lokalt men skickas inte.</p>{% endif %}
+    {% if resend.running %}<p class="muted">Omsändning pågår: {{ resend.done }} av {{ resend.total }}.</p>
+    {% elif resend.finished %}<p class="muted">Senaste omsändning {{ resend.finished }}: {{ resend.done }} av {{ resend.total }} skickade{% if resend.last and resend.last != 202 %}, avbröts med svar {{ resend.last }}{% endif %}.</p>{% endif %}
+    <form method="post" action="{{ url_for('oe_resend') }}">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+      <button class="btn" type="submit" {{ 'disabled' if not failed or resend.running }}>Skicka om misslyckade</button>
+    </form>
+    <p class="help">Händelserna skickas med sin ursprungliga tidpunkt, en varannan sekund. Omsändningen avbryts vid första fel.</p>
+  </section>
+</div>
+</div>
+{% endblock %}

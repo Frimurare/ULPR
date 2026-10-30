@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+{% block title %}Logga in{% endblock %}
+{% block page %}login{% endblock %}
+{% block mainclass %}login-wrap{% endblock %}
+{% block content %}
+<div class="login-card">
+  <img class="login-logo" src="{{ url_for('logo', v=logo_rev) }}" alt="Logotyp">
+  <h1>{{ company or product }}</h1>
+  <p class="muted">{% if company %}{{ product }} – {% endif %}Logga in för att administrera nummerplåtsläsningen.</p>
+  <form method="post">
+    <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+    <label for="pw">Lösenord</label>
+    <input id="pw" type="password" name="password" autocomplete="current-password" autofocus required>
+    <button class="btn primary wide" type="submit">Logga in</button>
+  </form>
+</div>
+{% endblock %}

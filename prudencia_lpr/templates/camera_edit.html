@@ -1,0 +1,91 @@
+{% extends 'base.html' %}
+{% block title %}{{ 'Ändra kamera' if cam.id else 'Ny kamera' }}{% endblock %}
+{% block page %}camera{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>{{ 'Ändra kamera: ' ~ cam.name if cam.id else 'Lägg till kamera' }}</h1>
+  <a class="btn ghost" href="{{ url_for('cameras') }}">Tillbaka</a>
+</div>
+<form method="post" id="camform" autocomplete="off">
+  <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+  <input type="hidden" name="id" value="{{ cam.id or '' }}">
+  <div class="grid2">
+    <section class="card">
+      <h2>Grunduppgifter</h2>
+      <label>Namn<input type="text" name="name" value="{{ cam.name }}" maxlength="60" required placeholder="t.ex. Infart norr"></label>
+      <label class="check"><input type="checkbox" name="enabled" value="1" {{ 'checked' if cam.enabled }}> Aktiverad (kameran analyseras)</label>
+
+      <h2>Videokälla</h2>
+      <div class="seg">
+        <label><input type="radio" name="source_mode" value="host" {{ 'checked' if cam.source_mode != 'url' }}> Adress och sökväg</label>
+        <label><input type="radio" name="source_mode" value="url" {{ 'checked' if cam.source_mode == 'url' }}> Fullständig RTSP-adress</label>
+      </div>
+      <div data-mode="host">
+        <div class="row">
+          <label class="grow">Adress (IP eller värdnamn)<input type="text" name="host" value="{{ cam.host }}" placeholder="192.168.1.20"></label>
+          <label class="w100">Port<input type="number" name="port" value="{{ cam.port or 554 }}" min="1" max="65535"></label>
+        </div>
+        <label>Sökväg<input type="text" name="path" value="{{ cam.path }}" class="mono" placeholder="/axis-media/media.amp?videocodec=h264"></label>
+        <p class="help">Exempel: Axis <span class="mono">/axis-media/media.amp?videocodec=h264&amp;fps=10</span>, Hikvision <span class="mono">/Streaming/Channels/101</span>, Hanwha <span class="mono">/profile2/media.smp</span>.</p>
+      </div>
+      <div data-mode="url">
+        <label>RTSP-adress<input type="text" name="rtsp_url" value="{{ cam.rtsp_url }}" class="mono" placeholder="rtsp://192.168.1.20:554/stream1"></label>
+        <p class="help">Användarnamn och lösenord nedan läggs till automatiskt om adressen inte redan innehåller inloggning.</p>
+      </div>
+      <div class="row">
+        <label class="grow">Användarnamn<input type="text" name="username" value="{{ cam.username }}" autocomplete="off"></label>
+        <label class="grow">Lösenord<input type="password" name="password" value="" autocomplete="new-password" placeholder="{{ 'Sparat – lämna tomt för att behålla' if cam.has_password else '' }}"></label>
+      </div>
+      {% if cam.has_password %}<label class="check small"><input type="checkbox" name="clear_password" value="1"> Ta bort sparat lösenord</label>{% endif %}
+      <div class="actions">
+        <button class="btn" type="button" id="btn-test">Testa anslutning</button>
+        <span class="muted small" id="test-msg"></span>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Bild och analysområde</h2>
+      <div class="preview" id="preview">
+        <div class="preview-empty" id="preview-empty">Klicka på <strong>Testa anslutning</strong> för att hämta en bild från kameran. Dra sedan en rektangel i bilden för att begränsa analysen till ett område (ROI).</div>
+        <canvas id="roi-canvas" hidden></canvas>
+      </div>
+      <div class="row">
+        <label class="grow">Analysområde, ROI (x1,y1,x2,y2 i pixlar)<input type="text" name="roi" id="roi" value="{{ cam.roi_text }}" class="mono" placeholder="Tomt = hela bilden"></label>
+        <div class="end"><button class="btn small ghost" type="button" id="roi-clear">Hela bilden</button></div>
+      </div>
+      <h2>Analys</h2>
+      <div class="row">
+        <label class="grow">Minsta skyltbredd (px)<input type="number" name="min_plate_w" value="{{ cam.min_plate_w or '' }}" min="20" max="1000" placeholder="Standard {{ default_w }}"></label>
+        <label class="grow">Analyserade bilder per sekund<input type="number" name="target_fps" value="{{ cam.target_fps or '' }}" min="0.5" max="30" step="0.5" placeholder="Standard {{ default_fps }}"></label>
+      </div>
+      <p class="help">Skyltar smalare än minsta bredd läses inte (för få pixlar för säker läsning). Sänk värdet om skyltar på avstånd missas, höj det om felläsningar förekommer.</p>
+    </section>
+  </div>
+
+  <section class="card">
+    <h2>OpenEye</h2>
+    <label>OpenEye kamera-id<input type="text" name="external_id" id="external_id" value="{{ cam.external_id }}" class="mono" placeholder="_OE_..."></label>
+    <p class="help">Kamera-id i OpenEye är <span class="mono">_OE_</span> följt av base64 av <span class="mono">recorderId|kamerans uuid</span>. Recorder-id är enhetens id i OpenEye Web Services (OWS), kamerans uuid hämtas från recorderns lokala API. Använd hjälparen nedan för att fylla i rätt värde.
+    {% if decoded %}<br>Nuvarande id avkodat: recorder <span class="mono">{{ decoded[0] }}</span>, kamera <span class="mono">{{ decoded[1] }}</span>.{% endif %}</p>
+    <details class="helper" id="helper">
+      <summary>Hämta kamera-id från en OpenEye-recorder</summary>
+      <div class="row">
+        <label class="grow">Recorderns adress<input type="text" id="rec-host" value="{{ s.oe_recorder_host }}" placeholder="192.168.1.10"></label>
+        <label class="grow">Användarnamn<input type="text" id="rec-user" value="{{ s.oe_recorder_user }}" autocomplete="off"></label>
+        <label class="grow">Lösenord<input type="password" id="rec-pass" autocomplete="new-password"></label>
+        <label class="grow">Recorder-id (OWS)<input type="text" id="rec-id" value="{{ s.oe_recorder_id }}" class="mono" placeholder="t.ex. 1VQABCD"></label>
+      </div>
+      <p class="help">Recordern nås via <span class="mono">https://&lt;adress&gt;/api/cameras</span>. Lösenordet sparas inte.</p>
+      <div class="actions"><button class="btn" type="button" id="rec-fetch">Hämta kameror</button><span class="muted small" id="rec-msg"></span></div>
+      <div class="table-wrap"><table class="table" id="rec-table" hidden>
+        <thead><tr><th>Kamera</th><th>IP</th><th>Modell</th><th>Status</th><th></th></tr></thead><tbody></tbody>
+      </table></div>
+    </details>
+  </section>
+
+  <div class="actions formend">
+    <button class="btn primary" type="submit">Spara kamera</button>
+    <a class="btn ghost" href="{{ url_for('cameras') }}">Avbryt</a>
+  </div>
+</form>
+{% endblock %}

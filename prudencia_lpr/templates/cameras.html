@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+{% block title %}Kameror{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Kameror</h1>
+  <a class="btn primary" href="{{ url_for('camera_edit') }}">Lägg till kamera</a>
+</div>
+{% if not cams %}
+<div class="card empty">Inga kameror är tillagda ännu. Klicka på <strong>Lägg till kamera</strong> för att börja.</div>
+{% else %}
+<div class="table-wrap">
+<table class="table">
+  <thead><tr><th>Namn</th><th>Källa</th><th>OpenEye kamera-id</th><th>Min. skyltbredd</th><th>Status</th><th></th></tr></thead>
+  <tbody>
+  {% for c in cams %}
+  <tr>
+    <td><strong>{{ c.name }}</strong></td>
+    <td class="mono small">{{ c.source }}</td>
+    <td>{% if c.external_id %}<span class="badge ok">Angivet</span>{% else %}<span class="badge warn">Saknas</span>{% endif %}</td>
+    <td>{{ c.min_plate_w ~ ' px' if c.min_plate_w else 'Standard' }}</td>
+    <td>{% if c.enabled %}<span class="badge ok">Aktiverad</span>{% else %}<span class="badge off">Inaktiverad</span>{% endif %}</td>
+    <td class="right nowrap">
+      <a class="btn small" href="{{ url_for('camera_edit', cid=c.id) }}">Ändra</a>
+      <form method="post" action="{{ url_for('camera_delete', cid=c.id) }}" class="inline" data-confirm="Ta bort kameran {{ c.name }}? Tidigare läsningar finns kvar i historiken.">
+        <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+        <button class="btn small danger" type="submit">Ta bort</button>
+      </form>
+    </td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endif %}
+{% endblock %}

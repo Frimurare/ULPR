@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+{% block title %}Översikt{% endblock %}
+{% block page %}overview{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Översikt</h1>
+  <span class="muted small" id="updated">Hämtar status …</span>
+</div>
+<section class="tiles" id="tiles">
+  <div class="tile"><div class="tile-label">Analysmotor</div><div class="tile-value" id="t-engine">–</div><div class="tile-sub" id="t-engine-sub"></div></div>
+  <div class="tile"><div class="tile-label">Läsningar idag</div><div class="tile-value" id="t-today">–</div><div class="tile-sub" id="t-failed"></div></div>
+  <div class="tile"><div class="tile-label">OpenEye</div><div class="tile-value" id="t-oe">–</div><div class="tile-sub" id="t-oe-sub"></div></div>
+  <div class="tile"><div class="tile-label">Driftdata</div><div class="tile-value" id="t-data">–</div><div class="tile-sub" id="t-data-sub"></div></div>
+  <div class="tile"><div class="tile-label">AI-accelerator</div><div class="tile-value" id="t-gpu">–</div><div class="tile-sub" id="t-gpu-sub"></div></div>
+  <div class="tile"><div class="tile-label">CPU</div><div class="tile-value" id="t-cpu">–</div><div class="tile-sub" id="t-cpu-sub"></div></div>
+  <div class="tile"><div class="tile-label">Minne</div><div class="tile-value" id="t-mem">–</div><div class="tile-sub" id="t-mem-sub"></div></div>
+</section>
+<h2>Kameror</h2>
+<div class="cam-grid" id="cams"><div class="muted">Hämtar …</div></div>
+<h2>Senaste läsningarna</h2>
+<div class="table-wrap">
+<table class="table" id="recent">
+  <thead><tr><th>Tid</th><th>Kamera</th><th>Skylt</th><th>Bild</th><th>Säkerhet</th><th>OpenEye</th></tr></thead>
+  <tbody><tr><td colspan="6" class="muted">Hämtar …</td></tr></tbody>
+</table>
+</div>
+{% endblock %}

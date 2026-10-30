@@ -1,0 +1,73 @@
+{% extends 'base.html' %}
+{% block title %}System{% endblock %}
+{% block page %}system{% endblock %}
+{% block content %}
+<h1>System</h1>
+<div class="grid2">
+<form method="post" class="card">
+  <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+  <h2>Allmänt</h2>
+  <div class="row">
+    <label class="grow">Lagringstid för läsningar och bilder (dagar)<input type="number" name="retention_days" value="{{ s.retention_days }}" min="1" max="3650"></label>
+    <label class="grow">Loggnivå<select name="log_level">{% for l, t in [('DEBUG', 'Felsökning'), ('INFO', 'Normal'), ('WARNING', 'Varningar'), ('ERROR', 'Endast fel')] %}<option value="{{ l }}" {{ 'selected' if s.log_level == l }}>{{ t }}</option>{% endfor %}</select></label>
+    <label class="grow">Maxstorlek för driftdata (GB, 0 = ingen gräns)<input type="number" name="max_data_gb" value="{{ s.max_data_gb|round(3) }}" min="0" step="0.001"></label>
+    <label class="w140">Webbport<input type="number" name="web_port" value="{{ s.web_port }}" min="1024" max="65535"></label>
+  </div>
+  <p class="help">Läsningar och bilder äldre än lagringstiden tas bort automatiskt (kontroll var 10:e minut). Driftdata är databasen med läsningar plus alla sparade bilder. När maxstorleken nås raderas de äldsta läsningarna och deras bilder först tills användningen är under gränsen igen, som i en inspelningsdatabas. Anpassa båda efter verksamhetens behov och dataskyddsbedömning.</p>
+  <label class="check"><input type="checkbox" name="save_rejects" value="1" {{ 'checked' if s.save_rejects }}> Spara bilder på skyltar som inte kunde läsas (för felsökning)</label>
+  <h2>Standardvärden för analys</h2>
+  <div class="row">
+    <label class="grow">Minsta skyltbredd (px)<input type="number" name="default_min_plate_w" value="{{ s.default_min_plate_w }}" min="20" max="1000"></label>
+    <label class="grow">Bilder per sekund<input type="number" name="default_fps" value="{{ s.default_fps }}" min="0.5" max="30" step="0.5"></label>
+    <label class="grow">Tröskel för skyltdetektering<input type="number" name="det_conf" value="{{ s.det_conf }}" min="0.05" max="0.95" step="0.05"></label>
+  </div>
+  <div class="row">
+    <label class="grow">Minsta teckensäkerhet<input type="number" name="min_char_conf" value="{{ s.min_char_conf }}" min="0.05" max="0.99" step="0.05"></label>
+    <label class="grow">Röster för tidig rapport<input type="number" name="early_votes" value="{{ s.early_votes }}" min="1" max="20"></label>
+    <label class="grow">Minsta antal röster<input type="number" name="min_votes" value="{{ s.min_votes }}" min="1" max="20"></label>
+  </div>
+  <div class="row">
+    <label class="grow">Spårets livslängd utan träff (s)<input type="number" name="track_timeout_s" value="{{ s.track_timeout_s }}" min="0.5" max="30" step="0.5"></label>
+    <label class="grow">Ignorera samma skylt igen inom (s)<input type="number" name="dedup_s" value="{{ s.dedup_s }}" min="0" max="86400"></label>
+  </div>
+  <p class="help">En skylt rapporteras när samma läsning fått tillräckligt många röster i följd. Ändringar gäller direkt, utan omstart.</p>
+  <div class="actions"><button class="btn primary" type="submit">Spara</button></div>
+</form>
+<div>
+  <section class="card">
+    <h2>Drift</h2>
+    <dl class="kv">
+      <dt>Version</dt><dd>{{ version }}</dd>
+      <dt>Analysmotor</dt><dd>{% if st.alive %}<span class="badge ok">Kör</span> sedan {{ started }}{% else %}<span class="badge bad">Kör inte</span>{% endif %}</dd>
+      <dt>Driftdata</dt><dd>{% if dd.used_mb is not none %}{{ dd.used_mb }} MB{% if dd.limit_gb %} av {{ dd.limit_gb }} GB ({{ dd.pct }} %){% else %} (ingen maxgräns){% endif %}<br><span class="muted small">Databas {{ dd.db_mb }} MB, bilder {{ dd.hits_mb }} MB</span>{% else %}Okänt (analysmotorn kör inte){% endif %}</dd>
+      <dt>Läsningar lagrade</dt><dd>{{ dd.count }}{% if dd.oldest %} (äldsta {{ dd.oldest }}){% endif %}</dd>
+      <dt>Senaste städning</dt><dd>{{ dd.last_prune or 'Inte körd ännu' }}</dd>
+      <dt>Diskutrymme</dt><dd>{{ (disk.free / 1073741824)|round(1) }} GB ledigt av {{ (disk.total / 1073741824)|round(0)|int }} GB</dd>
+      <dt>Webbport</dt><dd>{{ port }}</dd>
+    </dl>
+    <div class="actions">
+      <form method="post" action="{{ url_for('restart') }}" data-confirm="Starta om analysmotorn? Pågående analys avbryts i ungefär en halv minut.">
+        <input type="hidden" name="_csrf" value="{{ csrf_token() }}"><input type="hidden" name="vad" value="motor">
+        <button class="btn" type="submit">Starta om analysmotorn</button>
+      </form>
+      <form method="post" action="{{ url_for('restart') }}" data-confirm="Starta om webbgränssnittet?">
+        <input type="hidden" name="_csrf" value="{{ csrf_token() }}"><input type="hidden" name="vad" value="webb">
+        <button class="btn" type="submit">Starta om webbgränssnittet</button>
+      </form>
+      <a class="btn ghost" href="{{ url_for('change_password') }}">Byt lösenord</a>
+    </div>
+  </section>
+</div>
+</div>
+<section class="card">
+  <div class="page-head">
+    <h2>Logg</h2>
+    <div class="seg small" id="log-select">
+      <label><input type="radio" name="logfile" value="motor" checked> Analysmotor</label>
+      <label><input type="radio" name="logfile" value="webb"> Webbgränssnitt</label>
+      <button class="btn small ghost" type="button" id="log-refresh">Uppdatera</button>
+    </div>
+  </div>
+  <pre class="log" id="log">Hämtar …</pre>
+</section>
+{% endblock %}

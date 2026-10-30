@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+{% block title %}Utseende{% endblock %}
+{% block page %}appearance{% endblock %}
+{% block content %}
+<h1>Utseende</h1>
+<div class="grid2">
+<form method="post" enctype="multipart/form-data" class="card">
+  <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+  <h2>Logotyp och företagsnamn</h2>
+  <label>Företagsnamn i sidhuvudet (valfritt)<input type="text" name="company_name" value="{{ company }}" maxlength="80" placeholder="Lämna tomt för att visa Prudencia LPR"></label>
+  <label>Ny logotyp</label>
+  <div class="filepick">
+    <label class="btn" for="logo-file">Välj fil</label>
+    <span class="muted" id="logo-name">Ingen fil vald</span>
+    <input type="file" id="logo-file" name="logo" class="visually-hidden" accept=".png,.jpg,.jpeg,.svg,image/png,image/jpeg,image/svg+xml">
+  </div>
+  <p class="help">PNG, JPG eller SVG, högst 2 MB. Logotypen visas i sidhuvudet och på inloggningssidan. En liggande eller kvadratisk bild med transparent bakgrund ger bäst resultat.</p>
+  <div class="actions"><button class="btn primary" type="submit">Spara</button></div>
+</form>
+<section class="card">
+  <h2>Aktuell logotyp</h2>
+  <div class="logo-preview"><img src="{{ url_for('logo', v=logo_rev) }}" alt="Aktuell logotyp"></div>
+  <p class="muted">{{ 'Egen logotyp används.' if custom else 'Standardlogotypen (Prudencia-skölden) används.' }}</p>
+  <form method="post" action="{{ url_for('appearance_reset') }}" data-confirm="Återställ till Prudencia-skölden?">
+    <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+    <button class="btn" type="submit" {{ 'disabled' if not custom }}>Återställ till Prudencia-skölden</button>
+  </form>
+</section>
+</div>
+{% endblock %}

@@ -1,0 +1,21 @@
+[Unit]
+Description=Prudencia LPR - webbgränssnitt (port 2028)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=lpr
+Group=lpr
+WorkingDirectory=/opt/lpr
+UMask=0077
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/opt/lpr/venv/bin/python /opt/lpr/app.py webb
+Restart=always
+RestartSec=3
+MemoryMax=1G
+StandardOutput=null
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

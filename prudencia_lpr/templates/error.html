@@ -1,0 +1,5 @@
+{% extends 'base.html' %}
+{% block title %}Fel {{ code }}{% endblock %}
+{% block content %}
+<div class="card narrow"><h1>Fel {{ code }}</h1><p>{{ msg }}</p><p><a href="{{ url_for('overview') }}">Till översikten</a></p></div>
+{% endblock %}

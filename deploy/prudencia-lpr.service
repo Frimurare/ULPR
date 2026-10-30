@@ -1,0 +1,23 @@
+[Unit]
+Description=Prudencia LPR - analysmotor (skyltdetektering GPU + OCR -> OpenEye Event API)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=lpr
+Group=lpr
+WorkingDirectory=/opt/lpr
+UMask=0077
+Environment=PYTHONUNBUFFERED=1
+Environment=YOLO_VERBOSE=False
+ExecStart=/opt/lpr/venv/bin/python /opt/lpr/app.py motor
+Restart=always
+RestartSec=5
+MemoryMax=4G
+Nice=5
+StandardOutput=null
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

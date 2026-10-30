@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+{% block title %}Historik{% endblock %}
+{% block page %}history{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Historik</h1>
+  <a class="btn" href="{{ url_for('history_csv', **qs) }}">Exportera CSV</a>
+</div>
+<form method="get" class="card filters">
+  <label>Från<input type="date" name="fran" value="{{ a.get('fran', '') }}"></label>
+  <label>Till<input type="date" name="till" value="{{ a.get('till', '') }}"></label>
+  <label>Kamera<select name="kamera"><option value="">Alla</option>{% for c in cams %}<option value="{{ c.id }}" {{ 'selected' if a.get('kamera') == c.id|string }}>{{ c.name }}</option>{% endfor %}</select></label>
+  <label>Skylt innehåller<input type="text" name="skylt" value="{{ a.get('skylt', '') }}" class="mono" placeholder="t.ex. ABC"></label>
+  <label>Status<select name="status"><option value="">Alla</option>{% for k, v in statuses.items() %}<option value="{{ k }}" {{ 'selected' if a.get('status') == k }}>{{ v }}</option>{% endfor %}</select></label>
+  <div class="end"><button class="btn primary" type="submit">Sök</button> <a class="btn ghost" href="{{ url_for('history') }}">Rensa</a></div>
+</form>
+<p class="muted">{{ total }} läsningar{% if pages > 1 %}, sida {{ page }} av {{ pages }}{% endif %}.</p>
+<div class="table-wrap">
+<table class="table">
+  <thead><tr><th>Tid</th><th>Kamera</th><th>Skylt</th><th>Skyltbild</th><th>Översikt</th><th>Säkerhet</th><th>OpenEye</th></tr></thead>
+  <tbody>
+  {% for r in rows %}
+  <tr>
+    <td class="nowrap">{{ r.ts }}</td>
+    <td>{{ r.camera }}</td>
+    <td><span class="plate">{{ r.plate }}</span></td>
+    <td>{% if r.has_crop %}<a href="{{ url_for('image', rid=r.id, kind='skylt') }}" target="_blank" rel="noopener"><img class="thumb" loading="lazy" src="{{ url_for('image', rid=r.id, kind='skylt') }}" alt="Skylt {{ r.plate }}"></a>{% endif %}</td>
+    <td>{% if r.has_ctx %}<a href="{{ url_for('image', rid=r.id, kind='oversikt') }}" target="_blank" rel="noopener"><img class="thumb ctx" loading="lazy" src="{{ url_for('image', rid=r.id, kind='oversikt') }}" alt="Översikt {{ r.plate }}"></a>{% endif %}</td>
+    <td>{{ r.confidence }} %</td>
+    <td><span class="badge {{ 'ok' if r.status == 'sent' else ('bad' if r.status in ('send_failed', 'rate_limited') else 'off') }}" title="{{ r.ows_detail }}">{{ r.ows_status ~ ' ' if r.ows_status and r.ows_status != 202 else '' }}{{ r.status_text }}</span></td>
+  </tr>
+  {% else %}
+  <tr><td colspan="7" class="muted">Inga läsningar matchar sökningen.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% if pages > 1 %}
+<div class="pager">
+  {% if page > 1 %}<a class="btn small" href="{{ url_for('history', sida=page - 1, **qs) }}">Föregående</a>{% endif %}
+  <span class="muted">Sida {{ page }} av {{ pages }}</span>
+  {% if page < pages %}<a class="btn small" href="{{ url_for('history', sida=page + 1, **qs) }}">Nästa</a>{% endif %}
+</div>
+{% endif %}
+{% endblock %}

@@ -8,7 +8,7 @@ kameror, hårdvara och installation.
 
 ## Arkitektur
 
-RTSP från kameran → skyltdetektor (YOLO, GPU) → OCR (fast-plate-ocr, ONNX, CPU) →
+RTSP från kameran → skyltdetektor (YOLO på GPU eller Hailo) → OCR (fast-plate-ocr, ONNX, CPU) →
 röstning över flera bildrutor → formatkontroll (svenska skyltar) → avduplicering →
 loggning, databas och bildutsnitt → OpenEye Event API (`ANALYTIC_LICENSE_PLATE_DETECTED`).
 
@@ -43,9 +43,23 @@ rättigheter och visas aldrig i klartext.
 - Hårdvaruavkodning av video i GPU:n (NVDEC) och OCR på GPU via onnxruntime-gpu, samma
   modell och träffsäkerhet men lägre CPU-last per kamera, inför fler kameror per server.
 
-### 0.4 Liten hårdvara
-- Port till Raspberry Pi 5 med AI HAT+ 2 (Hailo-10H) för 2–4 kameror per enhet:
-  modeller kompilerade till HEF, H.265-huvudström, samma webbgränssnitt.
+### 0.4 Liten hårdvara: Raspberry Pi 5 + Hailo – pågår
+- Utbytbar detektor (`detectors.py`): `ultralytics` (GPU, .pt) eller `hailo` (HEF på
+  Hailo-8/8L/10H via HailoRT). Allt annat (spårning, röstning, OCR, webb, OpenEye, städning)
+  är samma kod på båda.
+- Hailo-backenden delar 5 Mpix-bilden i överlappande rutor (832 px nedskalade till nätets
+  416 px, 12 rutor per bild, batch 8 på kretsen) så att små skyltar behåller sina pixlar;
+  bitar som skärs av en rutkant släpps eftersom skylten finns hel i grannrutan.
+- Detektor i första versionen: Hailo Model Zoo `tiny_yolov4_license_plates` (färdigkompilerad
+  för hailo10h). Egen kompilering av samma skyltvikter som på GPU kräver Hailo Dataflow Compiler.
+- Hårdvaruavkodning av H.265 på Pi 5 (V4L2 stateless via ffmpeg, `decoder = ffmpeg`), YUV 4:2:0
+  genom pipen och färgkonvertering i OpenCV. Pi 5 saknar H.264-avkodare i hårdvara, så
+  kameran ska leverera H.265 (Axis: `videocodec=h265` i RTSP-adressen).
+- Uppmätt på Pi 5 (2 GB) + AI HAT+ 2, en 5 Mpix-kamera i 10 bilder/s: cirka 47 ms detektion per
+  bild, ungefär 1,2 CPU-kärnor totalt (avkodning + OCR + spårning), cirka 0,5 GB RAM.
+  Under 3 s från bildruta till händelse. Kameratak och kylbehov fastställs i fält.
+- Kvar: egen HEF av skyltdetektorn, kylning (aktiv kylare krävs under last), flera kameror
+  per enhet, installationsskript för Pi.
 - Alternativ GPU-klass för kontorsdatorer (RTX A2000 / RTX 2000 Ada).
 - Tvåstegslarm: Pi-enheten ger första triggern (person, fordon, rök) som analyshändelse till
   OpenEye, och OpenEyes AI Visual Check gör den andra kontrollen med ett fritextvillkor innan
