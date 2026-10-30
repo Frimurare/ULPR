@@ -37,7 +37,7 @@ DEFAULTS = {
     'det_imgsz': 1280,
     'hailo_tile': 832,          # rutstorlek i källbildens pixlar (0 = nätverkets egen indatastorlek)
     'hailo_overlap': 220,       # överlapp mellan rutor, minst bredaste skylten i px
-    'decoder': 'opencv',        # opencv | ffmpeg (ffmpeg-process med hårdvaruavkodning, t.ex. HEVC på Raspberry Pi 5)
+    'decoder': 'opencv',        # opencv | pyav (hårdvaruavkodning i processen, t.ex. HEVC på Raspberry Pi 5) | ffmpeg
     'det_conf': 0.4,
     'min_char_conf': 0.45,
     'early_votes': 3,

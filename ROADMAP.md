@@ -43,7 +43,7 @@ rättigheter och visas aldrig i klartext.
 - Hårdvaruavkodning av video i GPU:n (NVDEC) och OCR på GPU via onnxruntime-gpu, samma
   modell och träffsäkerhet men lägre CPU-last per kamera, inför fler kameror per server.
 
-### 0.4 Liten hårdvara: Raspberry Pi 5 + Hailo – pågår
+### 0.4 Liten hårdvara: Raspberry Pi 5 + Hailo – i drift på testplats 2026-10-30
 - Utbytbar detektor (`detectors.py`): `ultralytics` (GPU, .pt) eller `hailo` (HEF på
   Hailo-8/8L/10H via HailoRT). Allt annat (spårning, röstning, OCR, webb, OpenEye, städning)
   är samma kod på båda.
@@ -52,14 +52,18 @@ rättigheter och visas aldrig i klartext.
   bitar som skärs av en rutkant släpps eftersom skylten finns hel i grannrutan.
 - Detektor i första versionen: Hailo Model Zoo `tiny_yolov4_license_plates` (färdigkompilerad
   för hailo10h). Egen kompilering av samma skyltvikter som på GPU kräver Hailo Dataflow Compiler.
-- Hårdvaruavkodning av H.265 på Pi 5 (V4L2 stateless via ffmpeg, `decoder = ffmpeg`), YUV 4:2:0
-  genom pipen och färgkonvertering i OpenCV. Pi 5 saknar H.264-avkodare i hårdvara, så
-  kameran ska leverera H.265 (Axis: `videocodec=h265` i RTSP-adressen).
-- Uppmätt på Pi 5 (2 GB) + AI HAT+ 2, en 5 Mpix-kamera i 10 bilder/s: cirka 47 ms detektion per
-  bild, ungefär 1,2 CPU-kärnor totalt (avkodning + OCR + spårning), cirka 0,5 GB RAM.
-  Under 3 s från bildruta till händelse. Kameratak och kylbehov fastställs i fält.
-- Kvar: egen HEF av skyltdetektorn, kylning (aktiv kylare krävs under last), flera kameror
-  per enhet, installationsskript för Pi.
+- Hårdvaruavkodning av H.265 på Pi 5 i processen via PyAV mot systemets libavcodec
+  (`decoder = pyav`, V4L2 stateless), YUV 4:2:0 och färgkonvertering i OpenCV. Ingen extern
+  ffmpeg-process, så kamerainloggningen syns inte i processlistan. Pi 5 saknar H.264-avkodare i
+  hårdvara, så kameran ska leverera H.265 (Axis: `videocodec=h265` i RTSP-adressen).
+- Uppmätt på Pi 5 (2 GB) + AI HAT+ 2, en 5 Mpix-kamera i 10 bilder/s: 47–57 ms detektion per
+  bild, cirka 1,2 CPU-kärnor totalt, cirka 0,5 GB RAM. Utan aktiv kylare går CPU:n upp mot
+  85 °C och klockas ned, men håller ändå 10 bilder/s.
+- Parallellkörning mot GPU-versionen en dag (dagsljus och skymning): samma skyltar, ofta
+  0,1–1 s snabbare beslut, några fler läsningar på 50–55 px skyltar. Hailo-rutorna är
+  cirka 5 % smalare än GPU-detektorns, så minsta skyltbredd sätts några pixlar lägre.
+- Kvar: egen HEF av skyltdetektorn, aktiv kylning, flera kameror per enhet,
+  installationsskript för Pi, skärpta regler för läsningar med bara två röster i skymning.
 - Alternativ GPU-klass för kontorsdatorer (RTX A2000 / RTX 2000 Ada).
 - Tvåstegslarm: Pi-enheten ger första triggern (person, fordon, rök) som analyshändelse till
   OpenEye, och OpenEyes AI Visual Check gör den andra kontrollen med ett fritextvillkor innan

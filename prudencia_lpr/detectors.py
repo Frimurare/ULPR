@@ -59,7 +59,10 @@ def nms(boxes, scores, iou_thr):
         yy2 = np.minimum(y2[i], y2[order[1:]])
         inter = np.clip(xx2 - xx1, 0, None) * np.clip(yy2 - yy1, 0, None)
         iou = inter / (areas[i] + areas[order[1:]] - inter + 1e-9)
-        order = order[1:][iou < iou_thr]
+        # samma skylt från två överlappande rutor ger ofta en hel och en något mindre ruta: släng
+        # även rutor som till största delen ligger inuti en starkare (andel av den mindre ytan)
+        iomin = inter / (np.minimum(areas[i], areas[order[1:]]) + 1e-9)
+        order = order[1:][(iou < iou_thr) & (iomin < 0.6)]
     return keep
 
 

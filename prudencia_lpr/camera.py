@@ -126,7 +126,9 @@ class Reader(threading.Thread):
 
 
 class FFmpegReader(Reader):
-    """Som Reader men avkodar i en ffmpeg-process med hårdvaruacceleration (-hwaccel drm = V4L2 stateless,
+    """OBS: RTSP-adressen (med inloggning) hamnar på ffmpegs kommandorad och syns i processlistan för
+    andra användare på maskinen. Använd hellre decoder = pyav.
+    Som Reader men avkodar i en ffmpeg-process med hårdvaruacceleration (-hwaccel drm = V4L2 stateless,
     t.ex. HEVC på Raspberry Pi 5). Rutorna kommer som rå YUV 4:2:0 via en pipe. Codecs utan hårdvarustöd
     avkodas automatiskt i mjukvara av ffmpeg."""
 
@@ -218,5 +220,91 @@ class FFmpegReader(Reader):
             self.stop_ev.wait(2)
 
 
+class PyAVReader(Reader):
+    """Avkodar i processen med PyAV mot systemets libavcodec och hårdvaruacceleration (drm = V4L2 stateless,
+    HEVC på Raspberry Pi 5). Ingen extern process, så RTSP-adressen med inloggning syns aldrig i processlistan.
+    Rutorna hämtas som YUV 4:2:0 och färgkonverteras i OpenCV (billigare än swscale till BGR)."""
+
+    HWACCEL = os.environ.get('LPR_HWACCEL', 'drm')
+
+    def __init__(self, cam):
+        super().__init__(cam)
+        self.container = None
+
+    def stop(self):
+        self.stop_ev.set()
+        c = self.container
+        if c is not None:
+            try:
+                c.close()
+            except Exception:
+                pass
+
+    def _open(self):
+        import av
+        kw = {}
+        if self.HWACCEL and self.HWACCEL != 'none':
+            from av.codec.hwaccel import HWAccel
+            kw['hwaccel'] = HWAccel(device_type=self.HWACCEL, allow_software_fallback=True)
+        return av.open(self.url, options={'rtsp_transport': 'tcp', 'timeout': '10000000'}, timeout=(10, 10), **kw)
+
+    def run(self):
+        backoff = 2
+        while not self.stop_ev.is_set():
+            try:
+                self.container = self._open()
+                vs = self.container.streams.video[0]
+                vs.thread_type = 'AUTO'
+            except Exception as e:
+                self.container = None
+                self.last_error = 'Kan inte ansluta till strömmen'
+                log.warning('RTSP: kan inte öppna "%s" (%s): %s, nytt försök om %ss', self.label, describe(self.cam),
+                            redact(str(e))[:200], backoff)
+                self.stop_ev.wait(backoff)
+                backoff = min(backoff * 2, 60)
+                continue
+            first = True
+            err = ''
+            try:
+                for f in self.container.decode(vs):
+                    if self.stop_ev.is_set():
+                        break
+                    ts = time.time()
+                    yuv = f.to_ndarray(format='yuv420p') if f.format.name != 'yuv420p' else f.to_ndarray()
+                    bgr = cv2.cvtColor(yuv, cv2.COLOR_YUV2BGR_I420)
+                    if first:
+                        h, w = bgr.shape[:2]
+                        self.resolution = (w, h)
+                        log.info('RTSP: ansluten till "%s" (%dx%d, %s, PyAV hwaccel %s)', self.label, w, h,
+                                 vs.codec_context.name, self.HWACCEL)
+                        self.connected, self.last_error, backoff, first = True, '', 2, False
+                        self.connected_since = time.time()
+                    with self.lock:
+                        self.frame, self.ts = bgr, ts
+                        self.seq += 1
+                    self.frames_in += 1
+            except Exception as e:
+                err = redact(str(e))[:200]
+            finally:
+                try:
+                    self.container.close()
+                except Exception:
+                    pass
+                self.container = None
+            self.connected = False
+            self.connected_since = None
+            if self.stop_ev.is_set():
+                break
+            self.reconnects += 1
+            self.last_error = 'Strömmen tappades'
+            log.warning('RTSP: strömmen tappades för "%s", återansluter%s', self.label, f' ({err})' if err else '')
+            self.stop_ev.wait(2)
+
+
 def make_reader(cam, decoder='opencv'):
-    return FFmpegReader(cam) if str(decoder).lower().startswith('ffmpeg') else Reader(cam)
+    d = str(decoder).lower()
+    if d == 'pyav':
+        return PyAVReader(cam)
+    if d.startswith('ffmpeg'):
+        return FFmpegReader(cam)
+    return Reader(cam)

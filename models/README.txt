@@ -12,4 +12,4 @@ Raspberry Pi + Hailo (backend hailo): en HEF kompilerad för rätt krets, t.ex. 
 
 Inställningar (app.py installning NYCKEL VÄRDE): detector = sökväg till filen, det_backend
   (tomt = väljs av filändelsen), hailo_tile (rutstorlek i källpixlar, 832 för 5 Mpix),
-  hailo_overlap (minst bredaste skylten i px), decoder = ffmpeg för hårdvaruavkodning.
+  hailo_overlap (minst bredaste skylten i px), decoder = pyav för hårdvaruavkodning.

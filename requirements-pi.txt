@@ -1,5 +1,6 @@
 # Raspberry Pi 5 + AI HAT+ / AI HAT+ 2 (Hailo), Raspberry Pi OS / Debian 13 (Python 3.13):
-#   sudo apt install dkms hailo-h10-all      (Hailo-10H; hailo-all för Hailo-8/8L) + ffmpeg
+#   sudo apt install dkms hailo-h10-all python3-av   (Hailo-10H; hailo-all för Hailo-8/8L)
+#   decoder = pyav ger hårdvaruavkodning av H.265 i processen (systemets libavcodec)
 #   python3 -m venv --system-site-packages venv   (hailo_platform och numpy kommer från systemet)
 #   venv/bin/pip install -r requirements-pi.txt
 fast-plate-ocr==1.1.0
